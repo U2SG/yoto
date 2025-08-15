@@ -1,10 +1,8 @@
 [flake8]
 max-line-length = 88
 extend-ignore = 
-    # Black 冲突的错误码
     E203,  # whitespace before ':'
     W503,  # line break before binary operator
-    # 暂时忽略的复杂规则
     E501,  # line too long (handled by black)
     E722,  # do not use bare except
     F401,  # imported but unused
@@ -16,10 +14,8 @@ extend-ignore =
     W293,  # blank line contains whitespace
     W391,  # blank line at end of file
     W605,  # invalid escape sequence
-    # 复杂度相关
     C901,  # function is too complex
     C902,  # class is too complex
-    # 其他
     E731,  # do not assign a lambda expression, use a def
     E741,  # ambiguous variable name
     E742,  # ambiguous class name
