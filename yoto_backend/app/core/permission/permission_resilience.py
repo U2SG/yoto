@@ -583,22 +583,22 @@ class ResilienceController:
             # 返回默认值
             return default
 
-    def _set_to_source(self, key: str, field: str, value: str) -> bool:
+    def _set_to_source(self, key: str, field_name: str, value: str) -> bool:
         """设置配置到数据源"""
         current_time = time.time()
 
         if self.config_source and REDIS_AVAILABLE:
-            lock_key = f"lock:resilience:source:{key}:{field}"
+            lock_key = f"lock:resilience:source:{key}:{field_name}"
             lock = OptimizedDistributedLock(self.config_source, lock_key, timeout=2.0)
             with lock:
                 try:
-                    self.config_source.hset(key, field, value)
+                    self.config_source.hset(key, field_name, value)
                     with self.cache_lock:
                         if key not in self.local_cache:
                             self.local_cache[key] = {}
-                        self.local_cache[key][field] = value
+                        self.local_cache[key][field_name] = value
                         self.last_cache_update = current_time
-                    logger.debug(f"设置Redis配置并更新缓存: {key}.{field}")
+                    logger.debug(f"设置Redis配置并更新缓存: {key}.{field_name}")
                     return True
                 except Exception as e:
                     logger.error(f"设置Redis配置失败: {e}")
@@ -607,7 +607,7 @@ class ResilienceController:
             with self.cache_lock:
                 if key not in self.local_cache:
                     self.local_cache[key] = {}
-                self.local_cache[key][field] = value
+                self.local_cache[key][field_name] = value
                 self.last_cache_update = current_time
             return True
 

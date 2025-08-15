@@ -62,7 +62,7 @@ def register_permission(
         # 检查权限是否已存在
         try:
             # 检查是否在Flask应用上下文中
-            from flask import current_app
+            # current_app已在文件顶部导入
 
             try:
                 # 尝试访问current_app，如果成功说明在Flask上下文中
@@ -186,7 +186,7 @@ def register_role(name: str, server_id: int, is_active: bool = True) -> Dict:
         # 检查角色是否已存在
         try:
             # 检查是否在Flask应用上下文中
-            from flask import current_app
+            # current_app已在文件顶部导入
 
             try:
                 # 尝试访问current_app，如果成功说明在Flask上下文中
@@ -676,7 +676,7 @@ def get_permission_registry_stats() -> Dict:
     """
     try:
         # 检查是否在Flask应用上下文中
-        from flask import current_app
+        # current_app已在文件顶部导入
 
         try:
             # 尝试访问current_app，如果成功说明在Flask上下文中
@@ -805,7 +805,7 @@ def list_registered_permissions() -> List[Dict]:
     """
     try:
         # 检查是否在Flask应用上下文中
-        from flask import current_app
+        # current_app已在文件顶部导入
 
         try:
             # 尝试访问current_app，如果成功说明在Flask上下文中
@@ -857,7 +857,7 @@ def list_registered_roles() -> List[Dict]:
     """
     try:
         # 检查是否在Flask应用上下文中
-        from flask import current_app
+        # current_app已在文件顶部导入
 
         try:
             # 尝试访问current_app，如果成功说明在Flask上下文中

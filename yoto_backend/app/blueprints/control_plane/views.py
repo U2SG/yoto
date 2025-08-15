@@ -464,42 +464,5 @@ def get_resilience_stats() -> Dict[str, Any]:
         return {"status": "error", "controller_available": False, "error": str(e)}
 
 
-def get_cache_stats() -> Dict[str, Any]:
-    """获取缓存统计"""
-    try:
-        hybrid_cache = get_hybrid_cache()
-        stats = hybrid_cache.get_stats()
-
-        # 计算缓存健康状态
-        if stats.get("lru", {}).get("hit_rate", 0) > 0.8:
-            status = "healthy"
-        elif stats.get("lru", {}).get("hit_rate", 0) > 0.5:
-            status = "warning"
-        else:
-            status = "error"
-
-        return {"status": status, "stats": stats}
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
-
-
-def get_monitor_stats() -> Dict[str, Any]:
-    """获取监控统计"""
-    try:
-        monitor = get_permission_monitor()
-        if monitor:
-            stats = monitor.get_stats()
-
-            return {"status": "healthy", "monitor_available": True, "stats": stats}
-        else:
-            return {
-                "status": "warning",
-                "monitor_available": False,
-                "error": "监控器不可用",
-            }
-    except Exception as e:
-        return {"status": "error", "monitor_available": False, "error": str(e)}
-
-
 # 导入时间模块
 import time

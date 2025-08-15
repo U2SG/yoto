@@ -45,7 +45,6 @@ from app.core.permission.permissions_refactored import (
     warm_up_cache,
     register_permission,
 )
-from app.ws import init_socketio
 
 # 导入韧性模块
 from app.core.permission.permission_resilience import resilience

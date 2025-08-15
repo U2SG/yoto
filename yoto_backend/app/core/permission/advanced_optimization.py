@@ -203,7 +203,7 @@ advanced_optimization_ext = AdvancedOptimization()
 def get_advanced_optimizer() -> "AdvancedDistributedOptimizer":
     """获取全局高级分布式优化器实例。必须在 init_app 调用后才能工作。"""
     try:
-        from flask import current_app
+        # current_app已在文件顶部导入
 
         if "advanced_optimization" in current_app.extensions:
             return current_app.extensions["advanced_optimization"].optimizer
@@ -222,7 +222,7 @@ def get_advanced_optimizer() -> "AdvancedDistributedOptimizer":
 def get_advanced_optimization_config() -> dict:
     """获取已加载的高级优化配置。"""
     try:
-        from flask import current_app
+        # current_app已在文件顶部导入
 
         if "advanced_optimization" in current_app.extensions:
             return current_app.extensions["advanced_optimization"].config
