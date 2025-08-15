@@ -1,0 +1,50 @@
+# Yoto Backend - 权限系统重构项目依赖
+# 核心Web框架
+Flask==3.1.1
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.1.0
+Flask-JWT-Extended==4.7.1
+Flask-SocketIO==5.5.1
+
+# 数据库相关
+PyMySQL==1.1.0
+SQLAlchemy==2.0.35
+
+# 缓存和消息队列
+redis==5.2.1
+celery==5.5.3
+
+# WebSocket和异步
+eventlet==0.40.2
+python-socketio==5.12.1
+
+# 监控和指标
+prometheus-client==0.22.1
+psutil==7.0.0
+
+# 测试框架（已移至 requirements-dev.txt）
+
+# 开发和工具
+python-dotenv==1.0.1
+click==8.2.1
+colorama==0.4.6
+
+# 数据处理
+numpy==2.3.2
+
+# 文档和API
+flasgger==0.9.7.1
+
+# 其他工具
+cryptography==45.0.5
+certifi==2025.7.14
+charset-normalizer==3.4.2
+idna==3.10
+urllib3==2.4.0
+requests==2.32.3
+
+# 开发环境可选依赖
+# 如果需要更详细的日志和调试
+# python-json-logger==2.0.7
+# 如果需要更高级的缓存功能
+# cachetools==6.1.0 

@@ -1,0 +1,159 @@
+version: '3.8'
+
+services:
+  # API服务 - 从本地源代码构建
+  api:
+    build: .  # 直接从本地源代码构建
+    container_name: yoto_api
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      test_db:
+        condition: service_healthy
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - DATABASE_URI=mysql+pymysql://root:password@db:3306/yoto_db
+      - TEST_DATABASE_URI=mysql+pymysql://root:password@test_db:3306/yoto_test_db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./yoto_backend:/app/yoto_backend
+      - ./migrations:/app/migrations
+      - ./tests:/app/tests
+    working_dir: /app
+    restart: unless-stopped
+    networks:
+      - yoto_network
+
+  # 开发数据库服务
+  db:
+    image: mysql:8-alpine
+    container_name: yoto_db
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=yoto_db
+      - MYSQL_USER=yoto_user
+      - MYSQL_PASSWORD=yoto_password
+    volumes:
+      - ./db_data:/var/lib/mysql
+      - ./db_init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      timeout: 20s
+      retries: 10
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - yoto_network
+
+  # 测试数据库服务 - 与开发数据隔离
+  test_db:
+    image: mysql:8-alpine
+    container_name: yoto_test_db
+    ports:
+      - "3307:3306"  # 使用不同端口避免冲突
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=yoto_test_db
+      - MYSQL_USER=yoto_test_user
+      - MYSQL_PASSWORD=yoto_test_password
+    volumes:
+      - ./test_db_data:/var/lib/mysql
+      - ./db_init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      timeout: 20s
+      retries: 10
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - yoto_network
+
+  # Redis服务
+  redis:
+    image: redis:7-alpine
+    container_name: yoto_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+    restart: unless-stopped
+    networks:
+      - yoto_network
+
+  # Celery Worker服务 - 处理异步任务
+  celery_worker:
+    build: .
+    container_name: yoto_celery_worker
+    depends_on:
+      - redis
+      - db
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - DATABASE_URI=mysql+pymysql://root:password@db:3306/yoto_db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./yoto_backend:/app/yoto_backend
+    working_dir: /app
+    command: celery -A yoto_backend.celery_worker worker --loglevel=info --concurrency=2
+    restart: unless-stopped
+    networks:
+      - yoto_network
+
+  # Celery Beat服务 - 定时任务调度
+  celery_beat:
+    build: .
+    container_name: yoto_celery_beat
+    depends_on:
+      - redis
+      - db
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - DATABASE_URI=mysql+pymysql://root:password@db:3306/yoto_db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./yoto_backend:/app/yoto_backend
+    working_dir: /app
+    command: celery -A yoto_backend.celery_worker beat --loglevel=info
+    restart: unless-stopped
+    networks:
+      - yoto_network
+
+# 自定义bridge网络
+networks:
+  yoto_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 数据卷定义
+volumes:
+  db_data:
+    driver: local
+  test_db_data:
+    driver: local
+  redis_data:
+    driver: local

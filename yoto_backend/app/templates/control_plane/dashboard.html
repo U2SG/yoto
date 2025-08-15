@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限系统控制平面</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-name {
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+        
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: background-color 0.2s ease;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status.healthy {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .status.warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .status.error {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .chart-container {
+            height: 300px;
+            margin-top: 15px;
+        }
+        
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+        }
+        
+        .button:hover {
+            background: #5a6fd8;
+        }
+        
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .events-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        .event-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        
+        .event-item.info {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .event-item.warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .event-item.error {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .connection-status.connected {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .connection-status.disconnected {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>权限系统控制平面</h1>
+            <p>实时监控和管理权限系统状态</p>
+            <div class="user-info">
+                <span class="user-name">欢迎，{{ session.get('admin_username', '管理员') }}</span>
+                <a href="{{ url_for('control_plane.logout') }}" class="logout-btn">退出登录</a>
+            </div>
+        </div>
+        
+        <div class="connection-status" id="connection-status">
+            连接中...
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h3>系统状态</h3>
+                <div id="system-status">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>性能指标</h3>
+                <div class="chart-container">
+                    <canvas id="performance-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h3>缓存统计</h3>
+                <div id="cache-stats">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>韧性系统</h3>
+                <div id="resilience-stats">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h3>最近事件</h3>
+                <div class="events-container" id="recent-events">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>维护操作</h3>
+                <div id="maintenance-actions">
+                    <button class="button" onclick="triggerWarmup()">触发预热</button>
+                    <button class="button" onclick="refreshCache()">刷新缓存</button>
+                    <button class="button" onclick="clearEvents()">清除事件</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let socket = null;
+        let performanceChart = null;
+        
+        // 初始化Socket.IO连接
+        function initSocket() {
+            socket = io('/control');
+            
+            socket.on('connect', function() {
+                console.log('已连接到控制平面');
+                updateConnectionStatus('connected');
+                
+                // 订阅事件
+                socket.emit('subscribe_events', {
+                    event_types: ['all']
+                });
+                
+                // 请求初始状态
+                socket.emit('request_status', { type: 'system' });
+                socket.emit('request_status', { type: 'performance' });
+                socket.emit('request_status', { type: 'cache' });
+            });
+            
+            socket.on('disconnect', function() {
+                console.log('与服务器断开连接');
+                updateConnectionStatus('disconnected');
+            });
+            
+            socket.on('welcome', function(data) {
+                console.log('欢迎消息:', data);
+            });
+            
+            socket.on('system_status', function(data) {
+                updateSystemStatus(data);
+            });
+            
+            socket.on('performance_stats', function(data) {
+                updatePerformanceChart(data);
+            });
+            
+            socket.on('cache_stats', function(data) {
+                updateCacheStats(data);
+            });
+            
+            socket.on('recent_events', function(data) {
+                updateRecentEvents(data);
+            });
+            
+            socket.on('permission_event', function(data) {
+                console.log('收到权限事件:', data);
+                // 可以在这里添加事件处理逻辑
+            });
+            
+            socket.on('error', function(data) {
+                console.error('错误:', data);
+                alert('错误: ' + data.message);
+            });
+        }
+        
+        // 更新连接状态
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connection-status');
+            statusElement.textContent = status === 'connected' ? '已连接' : '已断开';
+            statusElement.className = 'connection-status ' + status;
+        }
+        
+        // 更新系统状态
+        function updateSystemStatus(data) {
+            const container = document.getElementById('system-status');
+            
+            let html = `
+                <div class="metric">
+                    <span class="metric-label">整体状态:</span>
+                    <span class="status ${data.status}">${data.status}</span>
+                </div>
+            `;
+            
+            if (data.components) {
+                for (const [name, component] of Object.entries(data.components)) {
+                    html += `
+                        <div class="metric">
+                            <span class="metric-label">${name}:</span>
+                            <span class="status ${component.status}">${component.status}</span>
+                        </div>
+                    `;
+                }
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // 更新性能图表
+        function updatePerformanceChart(data) {
+            const ctx = document.getElementById('performance-chart').getContext('2d');
+            
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+            
+            const stats = data.stats || {};
+            
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['缓存命中率', '平均响应时间', 'QPS', '错误率'],
+                    datasets: [{
+                        label: '性能指标',
+                        data: [
+                            (stats.cache_hit_rate || 0) * 100,
+                            stats.avg_response_time || 0,
+                            stats.qps || 0,
+                            (stats.error_rate || 0) * 100
+                        ],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 更新缓存统计
+        function updateCacheStats(data) {
+            const container = document.getElementById('cache-stats');
+            const stats = data.stats || {};
+            
+            let html = `
+                <div class="metric">
+                    <span class="metric-label">状态:</span>
+                    <span class="status ${data.status}">${data.status}</span>
+                </div>
+            `;
+            
+            if (stats.lru) {
+                html += `
+                    <div class="metric">
+                        <span class="metric-label">LRU命中率:</span>
+                        <span class="metric-value">${(stats.lru.hit_rate * 100).toFixed(1)}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">LRU大小:</span>
+                        <span class="metric-value">${stats.lru.size || 0}</span>
+                    </div>
+                `;
+            }
+            
+            if (stats.redis) {
+                html += `
+                    <div class="metric">
+                        <span class="metric-label">Redis连接:</span>
+                        <span class="metric-value">${stats.redis.connected ? '正常' : '异常'}</span>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // 更新韧性系统统计
+        function updateResilienceStats(data) {
+            const container = document.getElementById('resilience-stats');
+            
+            let html = `
+                <div class="metric">
+                    <span class="metric-label">控制器状态:</span>
+                    <span class="status ${data.status}">${data.status}</span>
+                </div>
+            `;
+            
+            if (data.configs) {
+                const configs = data.configs;
+                if (configs.circuit_breakers) {
+                    html += `
+                        <div class="metric">
+                            <span class="metric-label">熔断器配置:</span>
+                            <span class="metric-value">${Object.keys(configs.circuit_breakers).length}</span>
+                        </div>
+                    `;
+                }
+                if (configs.rate_limits) {
+                    html += `
+                        <div class="metric">
+                            <span class="metric-label">限流器配置:</span>
+                            <span class="metric-value">${Object.keys(configs.rate_limits).length}</span>
+                        </div>
+                    `;
+                }
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // 更新最近事件
+        function updateRecentEvents(data) {
+            const container = document.getElementById('recent-events');
+            const events = data.events || [];
+            
+            if (events.length === 0) {
+                container.innerHTML = '<div class="loading">暂无事件</div>';
+                return;
+            }
+            
+            let html = '';
+            events.slice(0, 10).forEach(event => {
+                const level = event.level || 'info';
+                html += `
+                    <div class="event-item ${level}">
+                        <strong>${event.timestamp}</strong><br>
+                        ${event.message}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 维护操作函数
+        function triggerWarmup() {
+            fetch('/control/api/maintenance/warmup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('预热操作已触发');
+                } else {
+                    alert('预热操作失败: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('请求失败: ' + error);
+            });
+        }
+        
+        function refreshCache() {
+            const userId = prompt('请输入用户ID:');
+            if (userId) {
+                fetch('/control/api/maintenance/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ user_id: userId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('缓存刷新操作已触发');
+                    } else {
+                        alert('缓存刷新失败: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('请求失败: ' + error);
+                });
+            }
+        }
+        
+        function clearEvents() {
+            fetch('/control/api/events/clear', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('事件已清除');
+                    document.getElementById('recent-events').innerHTML = '<div class="loading">暂无事件</div>';
+                } else {
+                    alert('清除事件失败: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('请求失败: ' + error);
+            });
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initSocket();
+        });
+    </script>
+</body>
+</html> 

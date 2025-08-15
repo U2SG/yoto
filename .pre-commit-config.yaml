@@ -1,0 +1,77 @@
+repos:
+  # 代码格式化
+  - repo: https://github.com/psf/black
+    rev: 24.12.0
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=88]
+
+  # 导入排序
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=88]
+
+  # 代码质量检查
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args: [--max-line-length=88, --extend-ignore=E203,W503]
+
+  # YAML文件检查
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types: [yaml]
+
+  # 文件结尾修复
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: check-json
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: name-tests-test
+      - id: requirements-txt-fixer
+
+  # 安全检查
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.8
+    hooks:
+      - id: bandit
+        args: [-r, ., -f, json, -o, bandit-report.json]
+        exclude: ^tests/
+
+  # 类型检查（可选，可能比较慢）
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.13.0
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies: [types-requests, types-redis]
+  #       args: [--ignore-missing-imports]
+
+  # 测试运行（可选，可能比较慢）
+  # - repo: local
+  #   hooks:
+  #     - id: pytest
+  #       name: pytest
+  #       entry: pytest
+  #       language: system
+  #       pass_filenames: false
+  #       always_run: true
+  #       args: [--tb=short, -v]
+
+ci:
+  autofix_commit_msg: 'style: auto fixes from pre-commit hooks'
+  autoupdate_commit_msg: 'ci: pre-commit autoupdate' 
