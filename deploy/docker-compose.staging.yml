@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  yoto-api:
+    image: docker.io/U2SG/yoto:staging-latest
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        monitor: 30s
+        max_failure_ratio: 0.5
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    environment:
+      - FLASK_ENV=staging
+      - DATABASE_URI=${STAGING_DATABASE_URI}
+      - REDIS_URL=${STAGING_REDIS_URL}
+      - CELERY_BROKER_URL=${STAGING_REDIS_URL}
+      - CELERY_RESULT_BACKEND=${STAGING_REDIS_URL}
+    networks:
+      - yoto-staging-network
+    ports:
+      - "5001:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  yoto-celery-worker:
+    image: docker.io/U2SG/yoto:staging-latest
+    command: celery -A yoto_backend.celery worker --loglevel=info
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    environment:
+      - FLASK_ENV=staging
+      - DATABASE_URI=${STAGING_DATABASE_URI}
+      - REDIS_URL=${STAGING_REDIS_URL}
+      - CELERY_BROKER_URL=${STAGING_REDIS_URL}
+      - CELERY_RESULT_BACKEND=${STAGING_REDIS_URL}
+    networks:
+      - yoto-staging-network
+
+networks:
+  yoto-staging-network:
+    driver: overlay
+    attachable: true 
